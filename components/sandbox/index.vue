@@ -102,7 +102,7 @@ const textareaRef = ref<HTMLTextAreaElement | null>(null)
 const selectedCountry = ref('')
 const selectedIndustry = ref('')
 
-const countries = ['USA', 'Canada', 'UK', 'Germany', 'India']
+const countries = ['EASTERN', 'Canada', 'UK', 'Germany', 'India']
 const industries = ['Finance', 'Healthcare', 'Education', 'Retail', 'Technology']
 
 function handleSubmit() {
@@ -110,9 +110,9 @@ function handleSubmit() {
   if (!message) return
 
   emit('message-sent', {
-    message,
-    country: selectedCountry.value,
-    industry: selectedIndustry.value
+    sms_text: message,
+    target_region: selectedCountry.value,
+    industry_context: selectedIndustry.value.toLocaleUpperCase()
   })
 
   input.value = ''

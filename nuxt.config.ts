@@ -1,15 +1,22 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 import tailwindcss from '@tailwindcss/vite'
 
+
 export default defineNuxtConfig({
   compatibilityDate: '2025-05-15',
+  runtimeConfig: {
+    public: {
+      apiBase: process.env.API_BASE
+    }
+  },
   devtools: { enabled: true },
   modules: [
     '@nuxt/eslint',
     '@nuxt/icon',
     '@nuxt/image',
     'shadcn-nuxt',
-    '@nuxtjs/color-mode'
+    '@nuxtjs/color-mode',
+    'nuxt-charts'
   ],
   css: ['~/assets/css/tailwind.css'],
   vite: {
