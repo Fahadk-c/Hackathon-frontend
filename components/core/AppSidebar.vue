@@ -78,6 +78,16 @@ const data = {
       title: 'Manual Checking',
       url: '/app/manual-checking',
       icon: Settings2,
+      items:[
+        {
+          title: 'Pending Reviews',
+      url: '/app/manual-checking/pending'
+        },
+        {
+          title: 'Past Reviews',
+      url: '/app/manual-checking/past-reviews'
+        }
+      ]
       
     },
   ],
