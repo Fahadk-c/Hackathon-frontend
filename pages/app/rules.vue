@@ -1,4 +1,6 @@
 <script setup lang="ts">
+const config = useRuntimeConfig()
+
 import {
   createColumnHelper,
   FlexRender,
@@ -40,27 +42,6 @@ interface Rule {
 
 const selectedRule = ref<Rule | null>(null)
 
-const data: Rule[] = [
-  {
-    id: '1',
-    name: 'Rule 1',
-    description: 'Description for Rule 1',
-    region: 'USA',
-    industry: 'Finance',
-    classification: 'default',
-    status: true,
-  },
-  {
-    id: '2',
-    name: 'Rule 2',
-    description: 'Description for Rule 2',
-    region: 'Germany',
-    industry: 'Healthcare',
-    classification: 'custom',
-    status: false,
-  },
-  // ... rest of the data unchanged ...
-]
 
 const columnHelper = createColumnHelper<Rule>()
 
@@ -86,40 +67,43 @@ const columns = [
         class: 'text-center max-w-[300px] mx-auto truncate',
       }, row.getValue('description')),
   }),
-  columnHelper.accessor('region', {
+  columnHelper.accessor('applicable_regions', {
     header: ({ column }) =>
       h(Button, {
         variant: 'ghost',
         class: 'text-center w-full',
         onClick: () => column.toggleSorting(column.getIsSorted() === 'asc'),
       }, () => ['Region', h(ChevronsUpDown, { class: 'ml-2 h-4 w-4' })]),
-    cell: ({ row }) => h('div', { class: 'text-center' }, row.getValue('region')),
+    cell: ({ row }) => {
+      const regions = row.getValue('applicable_regions')
+      // Handle array or fallback to string
+      if (Array.isArray(regions)) {
+        return h('div', { class: 'text-center' }, regions.join(', '))
+      }
+      return h('div', { class: 'text-center' }, regions || '')
+    },
   }),
-  columnHelper.accessor('industry', {
+  columnHelper.accessor('applicable_industries', {
     header: ({ column }) =>
       h(Button, {
         variant: 'ghost',
         class: 'text-center w-full',
         onClick: () => column.toggleSorting(column.getIsSorted() === 'asc'),
       }, () => ['Industry', h(ChevronsUpDown, { class: 'ml-2 h-4 w-4' })]),
-    cell: ({ row }) => h('div', { class: 'text-center' }, row.getValue('industry')),
+    cell: ({ row }) => {
+      const industries = row.getValue('applicable_industries')
+      // Handle array or fallback to string
+      if (Array.isArray(industries)) {
+        return h('div', { class: 'text-center' }, industries.join(', '))
+      }
+      return h('div', { class: 'text-center' }, industries || '')
+    },
   }),
-  columnHelper.accessor('classification', {
-    header: 'Classification',
-    cell: ({ row }) =>
-      h('div', {
-        class: `text-center ${
-          row.getValue('classification') === 'default'
-            ? 'text-primary'
-            : 'text-green-600'
-        }`,
-      }, row.getValue('classification')),
-  }),
-  columnHelper.accessor('status', {
+  columnHelper.accessor('is_active', {
     header: 'Status',
     cell: ({ row }) => {
       const id = `toggle-${row.original.id}`
-      const isChecked = row.getValue('status')
+      const isChecked = row.getValue('is_active')
       return h('label', {
         for: id,
         class: `relative block h-5 w-10 mx-auto rounded-full transition-colors 
@@ -142,6 +126,13 @@ const columns = [
         }),
       ])
     },
+  }),
+  columnHelper.accessor('rule_type', {
+    header: 'Status',
+    cell: ({ row }) =>
+      h('div', {
+        class: 'text-center max-w-[300px] mx-auto truncate',
+      }, row.getValue('rule_type')),
   }),
   columnHelper.display({
     id: 'actions',
@@ -166,9 +157,10 @@ const columns = [
       ]),
   }),
 ]
+const rules = ref<Rule[]>([])
 
 const table = useVueTable({
-  data,
+  data : rules,
   columns,
   getCoreRowModel: getCoreRowModel(),
   getSortedRowModel: getSortedRowModel(),
@@ -179,6 +171,12 @@ const loading = ref(false)
 definePageMeta({
   layout: 'rules'
 })
+
+const response = await useAsyncData('rules', async () => $fetch(`${config.public.apiBase}/rules`, { method: 'GET' }))
+
+rules.value = response.data.value || []
+
+
 </script>
 
 <template>
