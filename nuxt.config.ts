@@ -9,6 +9,7 @@ export default defineNuxtConfig({
       apiBase: process.env.API_BASE
     }
   },
+  ssr:false,
   devtools: { enabled: true },
   modules: [
     '@nuxt/eslint',
