@@ -92,18 +92,40 @@ import {
   SelectItem
 } from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
+const props = defineProps<{
+  suggestedMessage?: string
+}>()
+const input = ref('')
 
+import { watch } from 'vue'
+
+watch(
+  () => props.suggestedMessage,
+  (newVal) => {
+    if (newVal !== undefined && newVal !== null) {
+      input.value = newVal
+      nextTick(() => autoResize())
+    }
+  },
+  { immediate: true }
+)
 // Emit message to parent
 const emit = defineEmits(['message-sent'])
 
-const input = ref('')
 const textareaRef = ref<HTMLTextAreaElement | null>(null)
 
 const selectedCountry = ref('')
 const selectedIndustry = ref('')
 
-const countries = ['EASTERN', 'Canada', 'UK', 'Germany', 'India']
-const industries = ['Finance', 'Healthcare', 'Education', 'Retail', 'Technology']
+const config = useRuntimeConfig()
+const countries = ref<string[]>([])
+const industries = ref<string[]>([])
+
+const reg = await useAsyncData('countries', async () => $fetch(`${config.public.apiBase}/rules/regions`, { method: 'GET' }))
+console.log(reg);
+countries.value = reg.data.value || []
+const ind = await useAsyncData('industries', async () => $fetch(`${config.public.apiBase}/rules/industries`, { method: 'GET' }))
+industries.value = ind.data.value || []
 
 function handleSubmit() {
   const message = input.value.trim()
