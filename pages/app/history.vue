@@ -366,46 +366,237 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="space-y-6 p-6 max-w-6xl mx-auto">
-    <Card class="p-6 shadow-md border border-border bg-background dark:bg-slate-900 rounded-xl">
-      <CardHeader class="pb-4">
-        <CardTitle class="text-lg font-semibold text-foreground">
-          📈 Compliance Analytics Dashboard
-        </CardTitle>
-        <CardDescription class="text-muted-foreground">
-          {{
-            new Date(apiData.time_range.start).toLocaleDateString() === new Date(apiData.time_range.end).toLocaleDateString()
-              ? `Data for ${new Date(apiData.time_range.start).toLocaleDateString()}`
-              : `Data from ${new Date(apiData.time_range.start).toLocaleDateString()} to ${new Date(apiData.time_range.end).toLocaleDateString()}`
-          }}
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div class="h-96 mb-8">
-          <LineChart :chart-data="chartData" :options="chartOptions" />
+  <div class="min-h-screen bg-gray-50 p-3">
+    <div v-if="loading" class="flex items-center justify-center h-screen">
+      <div class="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-500"></div>
+    </div>
+
+    <div v-else class="max-w-7xl mx-auto space-y-3">
+      <!-- Header -->
+      <div class="bg-white rounded-lg shadow-sm p-3">
+        <h1 class="text-lg font-bold text-gray-900">Compliance Analytics Dashboard</h1>
+        <p class="text-xs text-gray-600 mt-0.5">
+          {{ new Date(apiData.time_range.start).toLocaleString() }} - 
+          {{ new Date(apiData.time_range.end).toLocaleString() }}
+        </p>
+      </div>
+
+      <!-- Critical Metrics -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div class="bg-white rounded-lg shadow-sm p-2.5">
+          <div class="flex items-center justify-between">
+            <h3 class="text-xs font-medium text-gray-500">Risk Level</h3>
+            <span class="text-lg font-bold text-gray-700">{{ criticalMetrics.risk.level }}</span>
+          </div>
+          <div class="mt-1.5 space-y-1">
+            <div class="flex items-center justify-between text-xs">
+              <span class="text-gray-500">Compliance Score:</span>
+              <span :class="criticalMetrics.risk.details.complianceScore >= 0.8 ? 'text-green-600' : 
+                            criticalMetrics.risk.details.complianceScore >= 0.6 ? 'text-yellow-600' : 'text-red-600'">
+                {{ (criticalMetrics.risk.details.complianceScore * 100).toFixed(1) }}%
+              </span>
+            </div>
+            <div class="flex items-center justify-between text-xs">
+              <span class="text-gray-500">Non-compliant Ratio:</span>
+              <span :class="criticalMetrics.risk.details.nonCompliantRatio <= 0.2 ? 'text-green-600' : 
+                            criticalMetrics.risk.details.nonCompliantRatio <= 0.4 ? 'text-yellow-600' : 'text-red-600'">
+                {{ (criticalMetrics.risk.details.nonCompliantRatio * 100).toFixed(1) }}%
+              </span>
+            </div>
+            <div class="flex items-center justify-between text-xs">
+              <span class="text-gray-500">Violations/Message:</span>
+              <span :class="criticalMetrics.risk.details.violationsPerMessage <= 1 ? 'text-green-600' : 
+                            criticalMetrics.risk.details.violationsPerMessage <= 2 ? 'text-yellow-600' : 'text-red-600'">
+                {{ criticalMetrics.risk.details.violationsPerMessage.toFixed(1) }}
+              </span>
+            </div>
+          </div>
         </div>
-        
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card v-for="(stat, index) in stats" :key="index" class="p-4 shadow-sm border-border">
-            <CardHeader class="flex flex-row items-center justify-between pb-2">
-              <CardTitle class="text-sm font-medium text-muted-foreground">
-                {{ stat.title }}
-              </CardTitle>
-              <span class="text-2xl">{{ stat.icon }}</span>
-            </CardHeader>
-            <CardContent>
-              <div class="text-2xl font-bold">
-                {{ typeof stat.value === 'number' && stat.title.includes('Rate') 
-                  ? `${(stat.value * 100).toFixed(1)}%` 
-                  : stat.value }}
-              </div>
-              <p v-if="stat.subvalue" class="text-xs text-muted-foreground mt-1">
-                {{ stat.subvalue }}
-              </p>
-            </CardContent>
-          </Card>
+        <div class="bg-white rounded-lg shadow-sm p-2.5">
+          <h3 class="text-xs font-medium text-gray-500">Average Score</h3>
+          <div class="mt-1">
+            <p class="text-lg font-bold" 
+               :class="apiData.compliance_scores.average_score < 0.6 ? 'text-red-600' : 
+                      apiData.compliance_scores.average_score < 0.8 ? 'text-yellow-600' : 'text-green-600'">
+              {{ (apiData.compliance_scores.average_score * 100).toFixed(1) }}%
+            </p>
+          </div>
         </div>
-      </CardContent>
-    </Card>
+        <div class="bg-white rounded-lg shadow-sm p-2.5">
+          <h3 class="text-xs font-medium text-gray-500">Messages Analyzed</h3>
+          <div class="mt-1">
+            <p class="text-lg font-bold text-blue-600">{{ apiData.total_messages_analyzed }}</p>
+          </div>
+        </div>
+        <div class="bg-white rounded-lg shadow-sm p-2.5">
+          <h3 class="text-xs font-medium text-gray-500">Total Violations</h3>
+          <div class="mt-1">
+            <p class="text-lg font-bold text-red-600">{{ criticalMetrics.totalViolations }}</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Charts Grid -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
+        <!-- Score Distribution -->
+        <div class="bg-white rounded-lg shadow-sm p-3">
+          <h3 class="text-sm font-semibold text-gray-900 mb-2">Compliance Score Distribution</h3>
+          <div class="h-[160px]">
+            <Bar :data="complianceScoreChart" 
+                 :options="{ 
+                   ...baseChartOptions,
+                   aspectRatio: 2,
+                   plugins: {
+                     ...baseChartOptions.plugins,
+                     legend: {
+                       ...baseChartOptions.plugins.legend,
+                       display: false
+                     }
+                   },
+                   scales: {
+                     y: {
+                       beginAtZero: true,
+                       ticks: { font: { size: 10 } }
+                     },
+                     x: {
+                       ticks: { font: { size: 10 } }
+                     }
+                   }
+                 }" />
+          </div>
+        </div>
+
+        <!-- Classifications -->
+        <div class="bg-white rounded-lg shadow-sm p-3">
+          <h3 class="text-sm font-semibold text-gray-900 mb-2">Message Classifications</h3>
+          <div class="h-[160px]">
+            <Doughnut :data="classificationsChart" 
+                      :options="{ 
+                        ...baseChartOptions,
+                        aspectRatio: 2,
+                        plugins: {
+                          ...baseChartOptions.plugins,
+                          legend: {
+                            position: 'right',
+                            labels: { font: { size: 10 }, padding: 10, boxWidth: 10 }
+                          }
+                        }
+                      }" />
+          </div>
+        </div>
+
+        <!-- Top Violations -->
+        <div class="bg-white rounded-lg shadow-sm p-3">
+          <h3 class="text-sm font-semibold text-gray-900 mb-2">Top Violation Categories</h3>
+          <div class="h-[160px]">
+            <Bar :data="topViolationsChart" 
+                 :options="{ 
+                   ...baseChartOptions,
+                   aspectRatio: 2,
+                   plugins: {
+                     ...baseChartOptions.plugins,
+                     legend: { display: false }
+                   },
+                   scales: {
+                     y: {
+                       beginAtZero: true,
+                       ticks: { font: { size: 10 } }
+                     },
+                     x: {
+                       ticks: { font: { size: 10 } }
+                     }
+                   }
+                 }" />
+          </div>
+        </div>
+
+        <!-- Industry Compliance -->
+        <div class="bg-white rounded-lg shadow-sm p-3">
+          <h3 class="text-sm font-semibold text-gray-900 mb-2">Industry Compliance Rates</h3>
+          <div class="h-[160px]">
+            <Bar :data="industryComplianceChart" 
+                 :options="{ 
+                   ...baseChartOptions,
+                   aspectRatio: 2,
+                   plugins: {
+                     ...baseChartOptions.plugins,
+                     legend: { display: false }
+                   },
+                   scales: {
+                     y: {
+                       beginAtZero: true,
+                       max: 100,
+                       ticks: { 
+                         font: { size: 10 },
+                         callback: (value) => `${value}%`
+                       }
+                     },
+                     x: {
+                       ticks: { font: { size: 10 } }
+                     }
+                   }
+                 }" />
+          </div>
+        </div>
+      </div>
+
+      <!-- Detailed Violations Table -->
+      <div class="bg-white rounded-lg shadow-sm p-3">
+        <div class="flex items-center justify-between mb-2">
+          <h3 class="text-sm font-semibold text-gray-900">Frequent Violations</h3>
+          <span class="text-xs text-gray-500">Top {{ apiData.violations.frequent_violations.length }} violations</span>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="px-2 py-1.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Violation</th>
+                <th class="px-2 py-1.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">Count</th>
+                <th class="px-2 py-1.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">Severity</th>
+              </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+              <tr v-for="violation in apiData.violations.frequent_violations" :key="violation.violation">
+                <td class="px-2 py-1.5">
+                  <div class="text-xs text-gray-900">{{ violation.violation }}</div>
+                </td>
+                <td class="px-2 py-1.5 whitespace-nowrap">
+                  <div class="text-xs text-gray-500">{{ violation.count }}</div>
+                </td>
+                <td class="px-2 py-1.5 whitespace-nowrap">
+                  <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full"
+                        :class="violation.count > 2 ? 'bg-red-100 text-red-800' : 
+                               violation.count > 1 ? 'bg-yellow-100 text-yellow-800' : 
+                               'bg-green-100 text-green-800'">
+                    {{ violation.count > 2 ? 'High' : violation.count > 1 ? 'Medium' : 'Low' }}
+                  </span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Industry Breakdown -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
+        <div v-for="(violations, industry) in apiData.violations.by_industry" 
+             :key="industry" 
+             class="bg-white rounded-lg shadow-sm p-3">
+          <h3 class="text-sm font-semibold text-gray-900 mb-2">{{ industry }} Violations</h3>
+          <ul class="space-y-1">
+            <li v-for="violation in violations.slice(0, 3)" 
+                :key="violation" 
+                class="flex items-start space-x-2">
+              <span class="flex-shrink-0 w-1.5 h-1.5 rounded-full bg-red-500 mt-1.5"></span>
+              <span class="text-xs text-gray-600">{{ violation }}</span>
+            </li>
+          </ul>
+          <p v-if="violations.length > 3" 
+             class="mt-1.5 text-xs text-gray-500">
+            And {{ violations.length - 3 }} more violations...
+          </p>
+        </div>
+      </div>
+    </div>
   </div>
 </template>

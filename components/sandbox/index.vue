@@ -35,7 +35,7 @@
             <!-- Country Select -->
             <Select v-model="selectedCountry">
               <SelectTrigger class="w-[120px] h-8 border border-muted-foreground rounded-md">
-                <SelectValue placeholder="Country" />
+                <SelectValue placeholder="Region" />
               </SelectTrigger>
               <SelectContent class="max-h-48 overflow-y-auto">
                 <SelectItem
