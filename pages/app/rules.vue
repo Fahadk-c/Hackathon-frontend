@@ -64,25 +64,10 @@ const columns = [
     header: 'Description',
     cell: ({ row }) =>
       h('div', {
-        class: 'text-center max-w-[300px] mx-auto truncate',
+        class: 'text-center min-w-[200px] max-w-[300px] mx-auto whitespace-pre-line break-words',
       }, row.getValue('description')),
   }),
-  columnHelper.accessor('applicable_regions', {
-    header: ({ column }) =>
-      h(Button, {
-        variant: 'ghost',
-        class: 'text-center w-full',
-        onClick: () => column.toggleSorting(column.getIsSorted() === 'asc'),
-      }, () => ['Region', h(ChevronsUpDown, { class: 'ml-2 h-4 w-4' })]),
-    cell: ({ row }) => {
-      const regions = row.getValue('applicable_regions')
-      // Handle array or fallback to string
-      if (Array.isArray(regions)) {
-        return h('div', { class: 'text-center' }, regions.join(', '))
-      }
-      return h('div', { class: 'text-center' }, regions || '')
-    },
-  }),
+
   columnHelper.accessor('applicable_industries', {
     header: ({ column }) =>
       h(Button, {
@@ -102,7 +87,7 @@ const columns = [
   columnHelper.accessor('is_active', {
     header: 'Status',
     cell: ({ row }) => {
-      const id = `toggle-${row.original.id}`
+      const id = `toggle-${row.id}`
       const isChecked = row.getValue('is_active')
       return h('label', {
         for: id,
@@ -117,7 +102,9 @@ const columns = [
           class: 'peer sr-only',
           onChange: (e: Event) => {
             const target = e.target as HTMLInputElement
-            console.log(`Status changed for ${row.original.name}:`, target.checked)
+            console.log(`Status changed for ${id}:`, target.checked)
+            changeStatusChange(row.original)
+            
           }
         }),
         h('span', {
@@ -172,11 +159,16 @@ definePageMeta({
   layout: 'rules'
 })
 
-const response = await useAsyncData('rules', async () => $fetch(`${config.public.apiBase}/rules`, { method: 'GET' }))
+const {data , refresh} = await useAsyncData('rules', async () => $fetch(`${config.public.apiBase}/rules`, { method: 'GET' }))
 
-rules.value = response.data.value || []
+rules.value = data.value || []
 
+const changeStatusChange = async (data) =>{
+console.log({data});
+const response = await $fetch(`${config.public.apiBase}/rules/${data.rule_id}`, { method: 'PATCH', body: { ...data, sender_id: 'LENDER1', message_id: 'h' } })
+refresh()
 
+}
 </script>
 
 <template>
